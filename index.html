@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（完成版）</title>
+    <title>剣道スコア（最終最適化版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
         .box { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .header-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-        .header-inputs input { width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .header-inputs input { width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; color: #000; }
         
         .input-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed; }
         .input-table th, .input-table td { border: 1px solid #ddd; padding: 4px; text-align: center; }
         .input-table th { background: #333; color: white; font-size: 11px; }
-        .name-input { width: 100%; border: none; font-size: 18px; font-weight: bold; text-align: center; padding: 10px 0; background: #fdfdfd; }
+        .name-input { width: 100%; border: none; font-size: 18px; font-weight: bold; text-align: center; padding: 10px 0; background: #fdfdfd; color: #000; }
         
         .btn-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 3px; }
         button { font-size: 10px; padding: 12px 0; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer; }
@@ -29,39 +29,39 @@
         .btn-main { background: #d90429; color: white; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; border: none; border-radius: 8px; margin-top: 10px; }
         .btn-all-clear { background: #6c757d; color: white; padding: 10px; font-size: 12px; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 15px; }
 
-        /* 保存用カード */
         #history-area { width: 100%; max-width: 900px; margin: 0 auto; }
-        .card-container { margin-bottom: 25px; }
-        .card { background: white; border: 2px solid #000; width: 100%; box-sizing: border-box; }
-        .card-header { padding: 8px; border-bottom: 2px solid #000; background: #f8f8f8; display: flex; justify-content: space-between; align-items: center; }
+        .card-container { margin-bottom: 35px; position: relative; }
+        .card { background: white; border: 2.5px solid #000; width: 100%; box-sizing: border-box; overflow: hidden; }
+        .card-header { padding: 10px; border-bottom: 2px solid #000; background: #f8f8f8; display: flex; justify-content: space-between; align-items: flex-end; }
+        
         .title-group { display: flex; flex-direction: column; text-align: left; }
-        .card-comp { font-size: 14px; font-weight: bold; color: #666; }
-        .card-label { font-size: 18px; font-weight: bold; color: #000; }
-        .card-date { font-size: 12px; color: #555; margin-right: 10px; }
+        .card-comp { font-size: 20px; font-weight: 900; color: #000; line-height: 1.2; }
+        .card-label { font-size: 14px; font-weight: bold; color: #666; margin-top: 2px; }
+        .card-date { font-size: 13px; font-weight: bold; color: #333; }
         
         .history-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .history-table th, .history-table td { border: 1.5px solid #000; text-align: center; vertical-align: middle; }
+        .history-table th, .history-table td { border: 1.5px solid #000; text-align: center; vertical-align: middle; color: #000; }
         .history-table th { background: #f0f0f0; font-size: 13px; height: 30px; }
         
-        .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; overflow: hidden; }
+        .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; }
         .p-pts-box { font-size: 22px; font-weight: bold; height: 32px; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .p-hansoku-box { font-size: 11px; height: 14px; color: #444; }
 
         .hantei-cell { font-weight: bold; }
-        .hantei-mark { font-size: 20px; }
-        .hantei-text { font-size: 10px; line-height: 1; }
+        .hantei-mark { font-size: 22px; }
+        .hantei-text { font-size: 11px; line-height: 1.1; }
 
-        .print-summary { font-size: 18px; font-weight: bold; padding: 10px; text-align: center; border-top: 2px solid #000; background: #f0f0f0; }
-        .res-label { margin-left: 10px; padding: 2px 8px; border-radius: 4px; background: #333; color: #fff; font-size: 16px; }
+        .print-summary { font-size: 20px; font-weight: bold; padding: 12px; text-align: center; border-top: 2.5px solid #000; background: #f0f0f0; color: #000; }
+        .res-label { margin-left: 10px; padding: 2px 10px; border-radius: 4px; background: #000; color: #fff; font-size: 18px; }
 
-        .action-btns { display: flex; gap: 10px; align-items: center; }
-        .edit-btn { background: #4caf50; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 11px; }
-        .del-btn { background: #f44336; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 11px; }
+        .card-actions-outer { display: flex; justify-content: flex-end; gap: 15px; margin-top: 8px; padding-right: 5px; }
+        .edit-btn { background: #4caf50; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .del-btn { background: #f44336; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         @media print {
-            .no-print { display: none !important; }
+            .no-print, .card-actions-outer { display: none !important; }
             body { background: white; padding: 0; }
-            .card-container { page-break-inside: avoid; margin-bottom: 10mm; }
+            .card-container { page-break-inside: avoid; margin-bottom: 15mm; }
         }
     </style>
 </head>
@@ -74,13 +74,13 @@
             <input type="text" id="match" placeholder="区分（例：予選1）" oninput="tempSave()">
         </div>
         <div class="header-inputs">
-            <input type="text" id="teamA" placeholder="自チーム（赤）" style="color:red" oninput="tempSave()">
-            <input type="text" id="teamB" placeholder="相手チーム（白）" style="color:blue" oninput="tempSave()">
+            <input type="text" id="teamA" placeholder="自チーム" oninput="tempSave()">
+            <input type="text" id="teamB" placeholder="相手チーム" oninput="tempSave()">
         </div>
         
         <table class="input-table">
             <thead>
-                <tr><th width="15%">位置</th><th width="35%">赤 選手名</th><th width="15%">勝敗</th><th width="35%">白 選手名</th></tr>
+                <tr><th width="15%">位置</th><th width="35%">選手名</th><th width="15%">勝敗</th><th width="35%">選手名</th></tr>
             </thead>
             <tbody id="input-body"></tbody>
         </table>
@@ -92,8 +92,8 @@
 
 <div id="history-area"></div>
 
-<div class="bottom-actions no-print" style="text-align:center; padding: 20px;">
-    <button onclick="window.print()" style="padding:15px; background:#333; color:white; border-radius:8px; width:80%; font-weight:bold;">印刷・PDF保存</button>
+<div class="bottom-actions no-print" style="text-align:center; padding: 30px;">
+    <button onclick="window.print()" style="padding:15px; background:#333; color:white; border-radius:8px; width:80%; font-weight:bold; cursor:pointer;">印刷・PDF保存</button>
 </div>
 
 <script>
@@ -104,11 +104,11 @@
 
     function tempSave() {
         const data = { comp: document.getElementById('comp').value, match: document.getElementById('match').value, teamA: document.getElementById('teamA').value, teamB: document.getElementById('teamB').value, playerNames, matchData };
-        localStorage.setItem('kendo_v4_temp', JSON.stringify(data));
+        localStorage.setItem('kendo_v6_temp', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('kendo_v4_temp');
+        const saved = localStorage.getItem('kendo_v6_temp');
         if (saved) {
             const d = JSON.parse(saved);
             document.getElementById('comp').value = d.comp || "";
@@ -118,7 +118,7 @@
             playerNames = d.playerNames;
             matchData = d.matchData;
         }
-        const hist = localStorage.getItem('kendo_v4_hist');
+        const hist = localStorage.getItem('kendo_v6_hist');
         if (hist) { matchHistory = JSON.parse(hist); updateHistoryDisplay(); }
         renderInput();
     }
@@ -169,9 +169,7 @@
     function addHansoku(i, side) {
         if (matchData[i]['f' + side] < 4) {
             matchData[i]['f' + side]++;
-            if (matchData[i]['f' + side] % 2 === 0) {
-                addP(i, side === 'A' ? 'B' : 'A', '反');
-            }
+            if (matchData[i]['f' + side] % 2 === 0) addP(i, side === 'A' ? 'B' : 'A', '反');
             tempSave(); renderInput();
         }
     }
@@ -195,7 +193,7 @@
         const d = matchData[i];
         if (d.order.length > 0) {
             const last = d.order.pop();
-            if (last.pt === 'FUSEN') { d['s'+last.side] = []; } 
+            if (last.pt === 'FUSEN') d['s'+last.side] = [];
             else {
                 d['s'+last.side].pop();
                 if (last.pt === '反') d['f'+(last.side==='A'?'B':'A')] -= 2;
@@ -205,24 +203,25 @@
     }
 
     function saveMatch() {
+        const now = new Date();
         const currentMatch = {
             id: Date.now(),
             comp: document.getElementById('comp').value || "記録",
             label: document.getElementById('match').value || "",
             teamA: document.getElementById('teamA').value || "自チーム",
             teamB: document.getElementById('teamB').value || "相手チーム",
-            date: new Date().toLocaleString('ja-JP', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}),
+            date: now.getFullYear() + "/" + ("0"+(now.getMonth()+1)).slice(-2) + "/" + ("0"+now.getDate()).slice(-2),
             results: JSON.parse(JSON.stringify(matchData.map((d, i) => ({...d, nA: playerNames[i].nA, nB: playerNames[i].nB}))))
         };
         matchHistory.unshift(currentMatch);
-        localStorage.setItem('kendo_v4_hist', JSON.stringify(matchHistory));
+        localStorage.setItem('kendo_v6_hist', JSON.stringify(matchHistory));
         updateHistoryDisplay();
         clearMatchInfoOnly(false);
     }
 
     function editMatch(id) {
         const m = matchHistory.find(x => x.id === id);
-        if (m && confirm('編集エリアに戻しますか？')) {
+        if (m && confirm('この内容を編集エリアに戻しますか？')) {
             document.getElementById('comp').value = m.comp;
             document.getElementById('match').value = m.label;
             document.getElementById('teamA').value = m.teamA;
@@ -235,9 +234,9 @@
     }
 
     function deleteHistory(id) {
-        if(confirm('完全に削除しますか？')) {
+        if(confirm('削除しますか？')) {
             matchHistory = matchHistory.filter(m => m.id !== id);
-            localStorage.setItem('kendo_v4_hist', JSON.stringify(matchHistory));
+            localStorage.setItem('kendo_v6_hist', JSON.stringify(matchHistory));
             updateHistoryDisplay();
         }
     }
@@ -250,11 +249,17 @@
                 const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 
-                let displayMark = "";
+                let displayMark = ""; 
                 let subText = "";
-                if (d.sA.length > d.sB.length) { displayMark = "〇"; wA++; }
-                else if (d.sB.length > d.sA.length) { displayMark = "✕"; wB++; }
-                else if (d.sA.length > 0 || d.sB.length > 0) { displayMark = ""; subText = "引き分け"; }
+                
+                if (d.sA.length > d.sB.length) { 
+                    displayMark = "〇"; wA++; 
+                } else if (d.sB.length > d.sA.length) { 
+                    displayMark = "✕"; wB++; 
+                } else {
+                    // 両者無得点、または同点（1-1など）の場合に「引き分け」を表示
+                    subText = "引き分け";
+                }
                 
                 pA += d.sA.length; pB += d.sB.length;
                 return { ptsA, ptsB, displayMark, subText, nA: d.nA, nB: d.nB, fA: d.fA, fB: d.fB };
@@ -270,16 +275,12 @@
                                 <span class="card-comp">${m.comp}</span>
                                 <span class="card-label">${m.label}</span>
                             </div>
-                            <div class="action-btns">
-                                <span class="card-date no-print">${m.date}</span>
-                                <button class="edit-btn no-print" onclick="editMatch(${m.id})">修正</button>
-                                <button class="del-btn no-print" onclick="deleteHistory(${m.id})">削除</button>
-                            </div>
+                            <span class="card-date">${m.date}</span>
                         </div>
                         <table class="history-table">
                             <tr><th width="18%"></th>${positions.map(p => `<th>${p[0]}</th>`).join('')}</tr>
                             <tr>
-                                <td class="print-team-name" style="color:red">${m.teamA}</td>
+                                <td class="print-team-name" style="font-weight:bold;">${m.teamA}</td>
                                 ${rows.map(r => `<td><div class="p-name-bold">${r.nA}</div><div class="p-hansoku-box">${"▲".repeat(r.fA)}</div><div class="p-pts-box">${r.ptsA}</div></td>`).join('')}
                             </tr>
                             <tr><td style="font-size:11px; background:#f0f0f0;">勝敗</td>${rows.map(r => `
@@ -288,11 +289,15 @@
                                     <div class="hantei-text">${r.subText}</div>
                                 </td>`).join('')}</tr>
                             <tr>
-                                <td class="print-team-name" style="color:blue">${m.teamB}</td>
+                                <td class="print-team-name" style="font-weight:bold;">${m.teamB}</td>
                                 ${rows.map(r => `<td><div class="p-pts-box">${r.ptsB}</div><div class="p-hansoku-box">${"▲".repeat(r.fB)}</div><div class="p-name-bold">${r.nB}</div></td>`).join('')}
                             </tr>
                         </table>
                         <div class="print-summary">結果：${wA}(${pA}) ― ${wB}(${pB}) <span class="res-label">${resText}</span></div>
+                    </div>
+                    <div class="card-actions-outer no-print">
+                        <button class="edit-btn" onclick="editMatch(${m.id})">修正</button>
+                        <button class="del-btn" onclick="deleteHistory(${m.id})">削除</button>
                     </div>
                 </div>`;
         });
@@ -300,7 +305,7 @@
     }
 
     function clearMatchInfoOnly(ask=true) {
-        if(!ask || confirm('入力をクリアしますか？')) {
+        if(!ask || confirm('入力をリセットしますか？')) {
             document.getElementById('match').value = ""; document.getElementById('teamB').value = "";
             playerNames = playerNames.map(p => ({ nA: p.nA, nB: "" }));
             matchData = positions.map(() => ({ sA: [], sB: [], fA: 0, fB: 0, order: [] }));
