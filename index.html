@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（最終最適化版）</title>
+    <title>剣道スコア（最終調整版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
@@ -43,7 +43,8 @@
         .history-table th, .history-table td { border: 1.5px solid #000; text-align: center; vertical-align: middle; color: #000; }
         .history-table th { background: #f0f0f0; font-size: 13px; height: 30px; }
         
-        .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; }
+        /* 選手名の一列表示設定 */
+        .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: clip; display: flex; justify-content: center; align-items: center; }
         .p-pts-box { font-size: 22px; font-weight: bold; height: 32px; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .p-hansoku-box { font-size: 11px; height: 14px; color: #444; }
 
@@ -104,11 +105,11 @@
 
     function tempSave() {
         const data = { comp: document.getElementById('comp').value, match: document.getElementById('match').value, teamA: document.getElementById('teamA').value, teamB: document.getElementById('teamB').value, playerNames, matchData };
-        localStorage.setItem('kendo_v6_temp', JSON.stringify(data));
+        localStorage.setItem('kendo_v7_temp', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('kendo_v6_temp');
+        const saved = localStorage.getItem('kendo_v7_temp');
         if (saved) {
             const d = JSON.parse(saved);
             document.getElementById('comp').value = d.comp || "";
@@ -118,7 +119,7 @@
             playerNames = d.playerNames;
             matchData = d.matchData;
         }
-        const hist = localStorage.getItem('kendo_v6_hist');
+        const hist = localStorage.getItem('kendo_v7_hist');
         if (hist) { matchHistory = JSON.parse(hist); updateHistoryDisplay(); }
         renderInput();
     }
@@ -129,7 +130,7 @@
             <tr>
                 <td rowspan="2" style="font-weight:bold; background:#f9f9f9;">${positions[i]}</td>
                 <td><input type="text" class="name-input" value="${playerNames[i].nA}" onchange="playerNames[${i}].nA=this.value; tempSave();"></td>
-                <td rowspan="2" style="font-size:11px; font-weight:bold;">${getResLabel(d.sA, d.sB)}</td>
+                <td rowspan="2" style="font-size:11px; font-weight:bold;">${getResLabel(d.sA, d.sB, i)}</td>
                 <td><input type="text" class="name-input" value="${playerNames[i].nB}" onchange="playerNames[${i}].nB=this.value; tempSave();"></td>
             </tr>
             <tr>
@@ -160,9 +161,11 @@
         `).join('');
     }
 
-    function getResLabel(sA, sB) {
+    function getResLabel(sA, sB, idx) {
         if (sA.length > sB.length) return "〇";
         if (sB.length > sA.length) return "✕";
+        // 代表戦(idx=5)の場合は引き分けを出さない
+        if (idx === 5) return (sA.length > 0 || sB.length > 0) ? "" : "-";
         return (sA.length > 0 || sB.length > 0) ? "引分" : "-";
     }
 
@@ -214,7 +217,7 @@
             results: JSON.parse(JSON.stringify(matchData.map((d, i) => ({...d, nA: playerNames[i].nA, nB: playerNames[i].nB}))))
         };
         matchHistory.unshift(currentMatch);
-        localStorage.setItem('kendo_v6_hist', JSON.stringify(matchHistory));
+        localStorage.setItem('kendo_v7_hist', JSON.stringify(matchHistory));
         updateHistoryDisplay();
         clearMatchInfoOnly(false);
     }
@@ -236,7 +239,7 @@
     function deleteHistory(id) {
         if(confirm('削除しますか？')) {
             matchHistory = matchHistory.filter(m => m.id !== id);
-            localStorage.setItem('kendo_v6_hist', JSON.stringify(matchHistory));
+            localStorage.setItem('kendo_v7_hist', JSON.stringify(matchHistory));
             updateHistoryDisplay();
         }
     }
@@ -245,7 +248,7 @@
         let html = '';
         matchHistory.forEach((m) => {
             let wA=0, wB=0, pA=0, pB=0;
-            const rows = m.results.map((d) => {
+            const rows = m.results.map((d, idx) => {
                 const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 
@@ -257,8 +260,11 @@
                 } else if (d.sB.length > d.sA.length) { 
                     displayMark = "✕"; wB++; 
                 } else {
-                    // 両者無得点、または同点（1-1など）の場合に「引き分け」を表示
-                    subText = "引き分け";
+                    // 代表戦(idx=5)以外かつ、無得点ではない場合に「引き分け」を表示
+                    if (idx !== 5 && (d.sA.length > 0 || d.sB.length > 0 || true)) {
+                        // 0-0でも剣道では引き分けなので、代表戦以外は常に判定
+                        subText = "引き分け";
+                    }
                 }
                 
                 pA += d.sA.length; pB += d.sB.length;
