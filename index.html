@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（人数切替対応版）</title>
+    <title>剣道スコア（7人制最適化版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
         .box { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
         
-        /* 人数切り替えボタン */
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .mode-btn { padding: 12px; border: 2px solid #ccc; background: white; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .mode-btn.active { border-color: #d90429; background: #d90429; color: white; }
@@ -28,9 +27,10 @@
         .btn-blue { color: blue; font-weight: bold; }
         .btn-fusen { background: #fff3cd; color: #856404; font-weight: bold; }
         
-        .pts-display { font-size: 20px; font-weight: bold; min-height: 28px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        /* 技の表示（縦書き統一） */
+        .pts-display { font-size: 20px; font-weight: bold; min-height: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .hansoku-display { color: #555; font-size: 12px; min-height: 14px; }
-        .circle-pt { border: 2px solid currentColor; border-radius: 50%; width: 1.3em; height: 1.3em; display: inline-block; line-height: 1.3em; text-align: center; }
+        .circle-pt { border: 2px solid currentColor; border-radius: 50%; width: 1.2em; height: 1.2em; display: inline-block; line-height: 1.2em; text-align: center; }
 
         .btn-main { background: #d90429; color: white; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; border: none; border-radius: 8px; margin-top: 10px; }
         .btn-all-clear { background: #6c757d; color: white; padding: 10px; font-size: 12px; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 15px; }
@@ -38,11 +38,18 @@
 
         .undo-btn { width: 80px; height: 35px; font-size: 14px; background: #eee; border: 1px solid #999; border-radius: 6px; }
 
-        #history-area { width: 100%; max-width: 900px; margin: 0 auto; }
+        #history-area { width: 100%; max-width: 1000px; margin: 0 auto; }
         .card-container { margin-bottom: 35px; position: relative; }
         .card { background: white; border: 2.5px solid #000; width: 100%; box-sizing: border-box; overflow: hidden; }
-        .card-header { padding: 10px; border-bottom: 2px solid #000; background: #f8f8f8; display: flex; justify-content: space-between; align-items: flex-end; }
         
+        /* 7人制の時の縮小用クラス */
+        .card.mode-7 { font-size: 12px; }
+        .card.mode-7 .p-name-bold { font-size: 14px; height: 20px; }
+        .card.mode-7 .p-pts-box { font-size: 16px; height: 45px; }
+        .card.mode-7 .history-table th { font-size: 10px; }
+        .card.mode-7 .hantei-mark { font-size: 16px; }
+
+        .card-header { padding: 10px; border-bottom: 2px solid #000; background: #f8f8f8; display: flex; justify-content: space-between; align-items: flex-end; }
         .title-group { display: flex; flex-direction: column; text-align: left; }
         .card-comp { font-size: 20px; font-weight: 900; color: #000; line-height: 1.2; }
         .card-label { font-size: 14px; font-weight: bold; color: #666; margin-top: 2px; }
@@ -52,8 +59,10 @@
         .history-table th, .history-table td { border: 1.5px solid #000; text-align: center; vertical-align: middle; color: #000; }
         .history-table th { background: #f0f0f0; font-size: 13px; height: 30px; }
         
-        .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: clip; display: flex; justify-content: center; align-items: center; }
-        .p-pts-box { font-size: 22px; font-weight: bold; height: 32px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; white-space: nowrap; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        
+        /* 保存用テーブルの技表示も縦に並べる */
+        .p-pts-box { font-size: 22px; font-weight: bold; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .p-hansoku-box { font-size: 11px; height: 14px; color: #444; }
 
         .hantei-cell { font-weight: bold; }
@@ -64,8 +73,8 @@
         .res-label { margin-left: 10px; padding: 2px 10px; border-radius: 4px; background: #000; color: #fff; font-size: 18px; }
 
         .card-actions-outer { display: flex; justify-content: flex-end; gap: 15px; margin-top: 8px; padding-right: 5px; }
-        .edit-btn { background: #4caf50; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .del-btn { background: #f44336; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .edit-btn { background: #4caf50; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .del-btn { background: #f44336; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
         @media print {
             .no-print, .card-actions-outer { display: none !important; }
@@ -116,7 +125,6 @@
     let currentMode = 5;
     const allPositions = ["先鋒", "次鋒", "五将", "中堅", "三将", "副将", "大将", "代表"];
     
-    // 現在のモード（3,5,7）に基づいたポジションリストを取得する関数
     function getActivePositions(count) {
         if (count === 3) return ["先鋒", "中堅", "大将", "代表"];
         if (count === 5) return ["先鋒", "次鋒", "中堅", "副将", "大将", "代表"];
@@ -128,7 +136,6 @@
     let matchData = [];
     let matchHistory = [];
 
-    // モード切り替え
     function changeMode(count) {
         if (matchData.some(d => d.sA.length > 0 || d.sB.length > 0 || d.fA > 0 || d.fB > 0)) {
             if (!confirm('入力中のスコアがリセットされますがよろしいですか？')) return;
@@ -142,7 +149,8 @@
 
     function updateModeButtons() {
         [3, 5, 7].forEach(c => {
-            document.getElementById(`btn-${c}`).classList.toggle('active', c === currentMode);
+            const btn = document.getElementById(`btn-${c}`);
+            if(btn) btn.classList.toggle('active', c === currentMode);
         });
     }
 
@@ -162,11 +170,11 @@
             playerNames, 
             matchData 
         };
-        localStorage.setItem('kendo_v8_temp', JSON.stringify(data));
+        localStorage.setItem('kendo_v9_temp', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('kendo_v8_temp');
+        const saved = localStorage.getItem('kendo_v9_temp');
         if (saved) {
             const d = JSON.parse(saved);
             currentMode = d.currentMode || 5;
@@ -180,7 +188,7 @@
             initDataStructure(5);
         }
         updateModeButtons();
-        const hist = localStorage.getItem('kendo_v8_hist');
+        const hist = localStorage.getItem('kendo_v9_hist');
         if (hist) { matchHistory = JSON.parse(hist); updateHistoryDisplay(); }
         renderInput();
     }
@@ -288,7 +296,7 @@
 
     function editMatch(id) {
         const m = matchHistory.find(x => x.id === id);
-        if (m && confirm('この内容を編集エリアに戻しますか？（人数設定も自動で切り替わります）')) {
+        if (m && confirm('この内容を編集エリアに戻しますか？')) {
             currentMode = m.mode || 5;
             document.getElementById('comp').value = m.comp;
             document.getElementById('match').value = m.label;
@@ -315,6 +323,8 @@
         matchHistory.forEach((m) => {
             let wA=0, wB=0, pA=0, pB=0;
             const posList = m.positions || getActivePositions(m.mode || 5);
+            const isMode7 = (m.mode === 7);
+            
             const rows = m.results.map((d, idx) => {
                 const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
@@ -325,8 +335,37 @@
                 pA += d.sA.length; pB += d.sB.length;
                 return { ptsA, ptsB, displayMark, subText, nA: d.nA, nB: d.nB, fA: d.fA, fB: d.fB };
             });
+            
             let resText = (wA > wB) ? "勝ち" : (wB > wA) ? "負け" : (pA > pB) ? "勝ち(本)" : (pB > pA) ? "負け(本)" : "引き分け";
-            html += `<div class="card-container"><div class="card"><div class="card-header"><div class="title-group"><span class="card-comp">${m.comp}</span><span class="card-label">${m.label} (${m.mode || 5}人制)</span></div><span class="card-date">${m.date}</span></div><table class="history-table"><tr><th width="18%"></th>${posList.map(p => `<th>${p[0]}</th>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamA}</td>${rows.map(r => `<td><div class="p-name-bold">${r.nA}</div><div class="p-hansoku-box">${"▲".repeat(r.fA)}</div><div class="p-pts-box">${r.ptsA}</div></td>`).join('')}</tr><tr><td style="font-size:11px; background:#f0f0f0;">勝敗</td>${rows.map(r => `<td class="hantei-cell"><div class="hantei-mark">${r.displayMark}</div><div class="hantei-text">${r.subText}</div></td>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamB}</td>${rows.map(r => `<td><div class="p-pts-box">${r.ptsB}</div><div class="p-hansoku-box">${"▲".repeat(r.fB)}</div><div class="p-name-bold">${r.nB}</div></td>`).join('')}</tr></table><div class="print-summary">結果：${wA}(${pA}) ― ${wB}(${pB}) <span class="res-label">${resText}</span></div></div><div class="card-actions-outer no-print"><button class="edit-btn" onclick="editMatch(${m.id})">修正</button><button class="del-btn" onclick="deleteHistory(${m.id})">削除</button></div></div>`;
+            
+            html += `<div class="card-container">
+                <div class="card ${isMode7 ? 'mode-7' : ''}">
+                    <div class="card-header">
+                        <div class="title-group">
+                            <span class="card-comp">${m.comp}</span>
+                            <span class="card-label">${m.label} (${m.mode || 5}人制)</span>
+                        </div>
+                        <span class="card-date">${m.date}</span>
+                    </div>
+                    <table class="history-table">
+                        <tr><th width="18%"></th>${posList.map(p => `<th>${p[0]}</th>`).join('')}</tr>
+                        <tr>
+                            <td style="font-weight:bold;">${m.teamA}</td>
+                            ${rows.map(r => `<td><div class="p-name-bold">${r.nA}</div><div class="p-hansoku-box">${"▲".repeat(r.fA)}</div><div class="p-pts-box">${r.ptsA}</div></td>`).join('')}
+                        </tr>
+                        <tr><td style="font-size:11px; background:#f0f0f0;">勝敗</td>${rows.map(r => `<td class="hantei-cell"><div class="hantei-mark">${r.displayMark}</div><div class="hantei-text">${r.subText}</div></td>`).join('')}</tr>
+                        <tr>
+                            <td style="font-weight:bold;">${m.teamB}</td>
+                            ${rows.map(r => `<td><div class="p-pts-box">${r.ptsB}</div><div class="p-hansoku-box">${"▲".repeat(r.fB)}</div><div class="p-name-bold">${r.nB}</div></td>`).join('')}
+                        </tr>
+                    </table>
+                    <div class="print-summary">結果：${wA}(${pA}) ― ${wB}(${pB}) <span class="res-label">${resText}</span></div>
+                </div>
+                <div class="card-actions-outer no-print">
+                    <button class="edit-btn" onclick="editMatch(${m.id})">修正</button>
+                    <button class="del-btn" onclick="deleteHistory(${m.id})">削除</button>
+                </div>
+            </div>`;
         });
         document.getElementById('history-area').innerHTML = html;
     }
@@ -342,8 +381,8 @@
     }
 
     function fullSystemReset() {
-        if(confirm('【重要】これまでに保存した全ての試合履歴が消去されます。本当によろしいですか？')) {
-            if(confirm('最終確認です。全てのデータが完全に消えます。よろしいですか？')) {
+        if(confirm('【重要】全データが消去されます。よろしいですか？')) {
+            if(confirm('本当によろしいですか？')) {
                 localStorage.clear();
                 location.reload();
             }
