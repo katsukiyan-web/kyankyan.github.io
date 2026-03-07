@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（7人制最適化版）</title>
+    <title>剣道スコア（技表示・縦書き完全統一版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
@@ -27,10 +27,10 @@
         .btn-blue { color: blue; font-weight: bold; }
         .btn-fusen { background: #fff3cd; color: #856404; font-weight: bold; }
         
-        /* 技の表示（縦書き統一） */
-        .pts-display { font-size: 20px; font-weight: bold; min-height: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+        /* 入力画面：技の表示（縦書き） */
+        .pts-display { font-size: 20px; font-weight: bold; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .hansoku-display { color: #555; font-size: 12px; min-height: 14px; }
-        .circle-pt { border: 2px solid currentColor; border-radius: 50%; width: 1.2em; height: 1.2em; display: inline-block; line-height: 1.2em; text-align: center; }
+        .circle-pt { border: 2px solid currentColor; border-radius: 50%; width: 1.2em; height: 1.2em; display: inline-block; line-height: 1.2em; text-align: center; flex-shrink: 0; }
 
         .btn-main { background: #d90429; color: white; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; border: none; border-radius: 8px; margin-top: 10px; }
         .btn-all-clear { background: #6c757d; color: white; padding: 10px; font-size: 12px; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 15px; }
@@ -42,12 +42,16 @@
         .card-container { margin-bottom: 35px; position: relative; }
         .card { background: white; border: 2.5px solid #000; width: 100%; box-sizing: border-box; overflow: hidden; }
         
-        /* 7人制の時の縮小用クラス */
+        /* 共通：保存用テーブルの技表示を強制縦並び */
+        .p-pts-box { font-size: 22px; font-weight: bold; min-height: 60px; display: flex !important; flex-direction: column !important; align-items: center; justify-content: center; gap: 3px; padding: 4px 0; }
+        
+        /* 7人制の時の縮小設定 */
         .card.mode-7 { font-size: 12px; }
         .card.mode-7 .p-name-bold { font-size: 14px; height: 20px; }
-        .card.mode-7 .p-pts-box { font-size: 16px; height: 45px; }
+        .card.mode-7 .p-pts-box { font-size: 16px; min-height: 45px; gap: 1px; }
         .card.mode-7 .history-table th { font-size: 10px; }
         .card.mode-7 .hantei-mark { font-size: 16px; }
+        .card.mode-7 .circle-pt { width: 1.1em; height: 1.1em; line-height: 1.1em; border-width: 1.5px; }
 
         .card-header { padding: 10px; border-bottom: 2px solid #000; background: #f8f8f8; display: flex; justify-content: space-between; align-items: flex-end; }
         .title-group { display: flex; flex-direction: column; text-align: left; }
@@ -60,9 +64,6 @@
         .history-table th { background: #f0f0f0; font-size: 13px; height: 30px; }
         
         .p-name-bold { font-size: 18px; font-weight: 900; height: 24px; line-height: 24px; white-space: nowrap; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-        
-        /* 保存用テーブルの技表示も縦に並べる */
-        .p-pts-box { font-size: 22px; font-weight: bold; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .p-hansoku-box { font-size: 11px; height: 14px; color: #444; }
 
         .hantei-cell { font-weight: bold; }
@@ -123,7 +124,6 @@
 
 <script>
     let currentMode = 5;
-    const allPositions = ["先鋒", "次鋒", "五将", "中堅", "三将", "副将", "大将", "代表"];
     
     function getActivePositions(count) {
         if (count === 3) return ["先鋒", "中堅", "大将", "代表"];
@@ -161,20 +161,12 @@
     }
 
     function tempSave() {
-        const data = { 
-            currentMode,
-            comp: document.getElementById('comp').value, 
-            match: document.getElementById('match').value, 
-            teamA: document.getElementById('teamA').value, 
-            teamB: document.getElementById('teamB').value, 
-            playerNames, 
-            matchData 
-        };
-        localStorage.setItem('kendo_v9_temp', JSON.stringify(data));
+        const data = { currentMode, comp: document.getElementById('comp').value, match: document.getElementById('match').value, teamA: document.getElementById('teamA').value, teamB: document.getElementById('teamB').value, playerNames, matchData };
+        localStorage.setItem('kendo_v10_temp', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('kendo_v9_temp');
+        const saved = localStorage.getItem('kendo_v10_temp');
         if (saved) {
             const d = JSON.parse(saved);
             currentMode = d.currentMode || 5;
@@ -188,7 +180,7 @@
             initDataStructure(5);
         }
         updateModeButtons();
-        const hist = localStorage.getItem('kendo_v9_hist');
+        const hist = localStorage.getItem('kendo_v10_hist');
         if (hist) { matchHistory = JSON.parse(hist); updateHistoryDisplay(); }
         renderInput();
     }
@@ -266,10 +258,7 @@
         if (d.order.length > 0) {
             const last = d.order.pop();
             if (last.pt === 'FUSEN') d['s'+last.side] = [];
-            else {
-                d['s'+last.side].pop();
-                if (last.pt === '反') d['f'+(last.side==='A'?'B':'A')] -= 2;
-            }
+            else { d['s'+last.side].pop(); if (last.pt === '反') d['f'+(last.side==='A'?'B':'A')] -= 2; }
         } else if (d.fA > 0) d.fA--; else if (d.fB > 0) d.fB--;
         tempSave(); renderInput();
     }
@@ -289,14 +278,14 @@
             results: JSON.parse(JSON.stringify(matchData.map((d, i) => ({...d, nA: playerNames[i].nA, nB: playerNames[i].nB}))))
         };
         matchHistory.unshift(currentMatch);
-        localStorage.setItem('kendo_v8_hist', JSON.stringify(matchHistory));
+        localStorage.setItem('kendo_v10_hist', JSON.stringify(matchHistory));
         updateHistoryDisplay();
         clearMatchInfoOnly(false);
     }
 
     function editMatch(id) {
         const m = matchHistory.find(x => x.id === id);
-        if (m && confirm('この内容を編集エリアに戻しますか？')) {
+        if (m && confirm('編集エリアに戻しますか？')) {
             currentMode = m.mode || 5;
             document.getElementById('comp').value = m.comp;
             document.getElementById('match').value = m.label;
@@ -304,16 +293,14 @@
             document.getElementById('teamB').value = m.teamB;
             playerNames = m.results.map(r => ({ nA: r.nA, nB: r.nB }));
             matchData = JSON.parse(JSON.stringify(m.results));
-            updateModeButtons();
-            renderInput();
-            window.scrollTo(0,0);
+            updateModeButtons(); renderInput(); window.scrollTo(0,0);
         }
     }
 
     function deleteHistory(id) {
         if(confirm('削除しますか？')) {
             matchHistory = matchHistory.filter(m => m.id !== id);
-            localStorage.setItem('kendo_v8_hist', JSON.stringify(matchHistory));
+            localStorage.setItem('kendo_v10_hist', JSON.stringify(matchHistory));
             updateHistoryDisplay();
         }
     }
@@ -326,8 +313,8 @@
             const isMode7 = (m.mode === 7);
             
             const rows = m.results.map((d, idx) => {
-                const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
-                const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
+                const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`).join('');
+                const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`).join('');
                 let displayMark = ""; let subText = "";
                 if (d.sA.length > d.sB.length) { displayMark = "〇"; wA++; }
                 else if (d.sB.length > d.sA.length) { displayMark = "✕"; wB++; }
@@ -371,7 +358,7 @@
     }
 
     function clearMatchInfoOnly(ask=true) {
-        if(!ask || confirm('入力をリセットしますか？')) {
+        if(!ask || confirm('リセットしますか？')) {
             document.getElementById('match').value = ""; document.getElementById('teamB').value = "";
             const activePos = getActivePositions(currentMode);
             playerNames = activePos.map(p => ({ nA: "", nB: "" }));
@@ -381,11 +368,8 @@
     }
 
     function fullSystemReset() {
-        if(confirm('【重要】全データが消去されます。よろしいですか？')) {
-            if(confirm('本当によろしいですか？')) {
-                localStorage.clear();
-                location.reload();
-            }
+        if(confirm('全履歴を削除します。よろしいですか？')) {
+            if(confirm('本当によろしいですか？')) { localStorage.clear(); location.reload(); }
         }
     }
 
