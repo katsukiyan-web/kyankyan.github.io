@@ -318,7 +318,7 @@
                 let displayMark = ""; let subText = "";
                 if (d.sA.length > d.sB.length) { displayMark = "〇"; wA++; }
                 else if (d.sB.length > d.sA.length) { displayMark = "✕"; wB++; }
-                else { if (idx !== posList.length-1) subText = "引き分け"; }
+                else { if (idx !== posList.length-1) subText = "引分け"; }
                 pA += d.sA.length; pB += d.sB.length;
                 return { ptsA, ptsB, displayMark, subText, nA: d.nA, nB: d.nB, fA: d.fA, fB: d.fB };
             });
