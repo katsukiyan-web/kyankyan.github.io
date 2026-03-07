@@ -323,7 +323,7 @@
                 return { ptsA, ptsB, displayMark, subText, nA: d.nA, nB: d.nB, fA: d.fA, fB: d.fB };
             });
             
-            let resText = (wA > wB) ? "勝ち" : (wB > wA) ? "負け" : (pA > pB) ? "勝ち(本)" : (pB > pA) ? "負け(本)" : "引き分け";
+            let resText = (wA > wB) ? "勝ち" : (wB > wA) ? "負け" : (pA > pB) ? "勝ち(本)" : (pB > pA) ? "負け(本)" : "引分け";
             
             html += `<div class="card-container">
                 <div class="card ${isMode7 ? 'mode-7' : ''}">
