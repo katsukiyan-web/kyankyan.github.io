@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（操作性向上版）</title>
+    <title>剣道スコア（人数切替対応版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
         .box { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        
+        /* 人数切り替えボタン */
+        .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .mode-btn { padding: 12px; border: 2px solid #ccc; background: white; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .mode-btn.active { border-color: #d90429; background: #d90429; color: white; }
+
         .header-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
         .header-inputs input { width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; color: #000; }
         
@@ -28,10 +34,8 @@
 
         .btn-main { background: #d90429; color: white; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; border: none; border-radius: 8px; margin-top: 10px; }
         .btn-all-clear { background: #6c757d; color: white; padding: 10px; font-size: 12px; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 15px; }
-        /* オールリセット用の赤いボタン */
         .btn-danger-all { background: #dc3545; color: white; padding: 10px; font-size: 12px; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 8px; }
 
-        /* 訂正ボタンの比率逆転（横長にする） */
         .undo-btn { width: 80px; height: 35px; font-size: 14px; background: #eee; border: 1px solid #999; border-radius: 6px; }
 
         #history-area { width: 100%; max-width: 900px; margin: 0 auto; }
@@ -73,6 +77,12 @@
 <body>
 
 <div class="no-print no-print-container">
+    <div class="mode-selector">
+        <button id="btn-3" class="mode-btn" onclick="changeMode(3)">3人制</button>
+        <button id="btn-5" class="mode-btn active" onclick="changeMode(5)">5人制</button>
+        <button id="btn-7" class="mode-btn" onclick="changeMode(7)">7人制</button>
+    </div>
+
     <div class="box">
         <div class="header-inputs">
             <input type="text" id="comp" placeholder="大会名" oninput="tempSave()">
@@ -103,39 +113,86 @@
 </div>
 
 <script>
-    const positions = ["先鋒", "次鋒", "中堅", "副将", "大将", "代表"];
-    let playerNames = positions.map(() => ({ nA: "", nB: "" }));
-    let matchData = positions.map(() => ({ sA: [], sB: [], fA: 0, fB: 0, order: [] }));
+    let currentMode = 5;
+    const allPositions = ["先鋒", "次鋒", "五将", "中堅", "三将", "副将", "大将", "代表"];
+    
+    // 現在のモード（3,5,7）に基づいたポジションリストを取得する関数
+    function getActivePositions(count) {
+        if (count === 3) return ["先鋒", "中堅", "大将", "代表"];
+        if (count === 5) return ["先鋒", "次鋒", "中堅", "副将", "大将", "代表"];
+        if (count === 7) return ["先鋒", "次鋒", "五将", "中堅", "三将", "副将", "大将", "代表"];
+        return [];
+    }
+
+    let playerNames = [];
+    let matchData = [];
     let matchHistory = [];
 
+    // モード切り替え
+    function changeMode(count) {
+        if (matchData.some(d => d.sA.length > 0 || d.sB.length > 0 || d.fA > 0 || d.fB > 0)) {
+            if (!confirm('入力中のスコアがリセットされますがよろしいですか？')) return;
+        }
+        currentMode = count;
+        initDataStructure(count);
+        updateModeButtons();
+        tempSave();
+        renderInput();
+    }
+
+    function updateModeButtons() {
+        [3, 5, 7].forEach(c => {
+            document.getElementById(`btn-${c}`).classList.toggle('active', c === currentMode);
+        });
+    }
+
+    function initDataStructure(count) {
+        const activePos = getActivePositions(count);
+        playerNames = activePos.map(() => ({ nA: "", nB: "" }));
+        matchData = activePos.map(() => ({ sA: [], sB: [], fA: 0, fB: 0, order: [] }));
+    }
+
     function tempSave() {
-        const data = { comp: document.getElementById('comp').value, match: document.getElementById('match').value, teamA: document.getElementById('teamA').value, teamB: document.getElementById('teamB').value, playerNames, matchData };
-        localStorage.setItem('kendo_v7_temp', JSON.stringify(data));
+        const data = { 
+            currentMode,
+            comp: document.getElementById('comp').value, 
+            match: document.getElementById('match').value, 
+            teamA: document.getElementById('teamA').value, 
+            teamB: document.getElementById('teamB').value, 
+            playerNames, 
+            matchData 
+        };
+        localStorage.setItem('kendo_v8_temp', JSON.stringify(data));
     }
 
     function loadData() {
-        const saved = localStorage.getItem('kendo_v7_temp');
+        const saved = localStorage.getItem('kendo_v8_temp');
         if (saved) {
             const d = JSON.parse(saved);
+            currentMode = d.currentMode || 5;
             document.getElementById('comp').value = d.comp || "";
             document.getElementById('match').value = d.match || "";
             document.getElementById('teamA').value = d.teamA || "";
             document.getElementById('teamB').value = d.teamB || "";
             playerNames = d.playerNames;
             matchData = d.matchData;
+        } else {
+            initDataStructure(5);
         }
-        const hist = localStorage.getItem('kendo_v7_hist');
+        updateModeButtons();
+        const hist = localStorage.getItem('kendo_v8_hist');
         if (hist) { matchHistory = JSON.parse(hist); updateHistoryDisplay(); }
         renderInput();
     }
 
     function renderInput() {
+        const activePos = getActivePositions(currentMode);
         const body = document.getElementById('input-body');
         body.innerHTML = matchData.map((d, i) => `
             <tr>
-                <td rowspan="2" style="font-weight:bold; background:#f9f9f9;">${positions[i]}</td>
+                <td rowspan="2" style="font-weight:bold; background:#f9f9f9;">${activePos[i]}</td>
                 <td><input type="text" class="name-input" value="${playerNames[i].nA}" onchange="playerNames[${i}].nA=this.value; tempSave();"></td>
-                <td rowspan="2" style="font-size:11px; font-weight:bold;">${getResLabel(d.sA, d.sB, i)}</td>
+                <td rowspan="2" style="font-size:11px; font-weight:bold;">${getResLabel(d.sA, d.sB, i === activePos.length-1)}</td>
                 <td><input type="text" class="name-input" value="${playerNames[i].nB}" onchange="playerNames[${i}].nB=this.value; tempSave();"></td>
             </tr>
             <tr>
@@ -166,10 +223,10 @@
         `).join('');
     }
 
-    function getResLabel(sA, sB, idx) {
+    function getResLabel(sA, sB, isDaihyo) {
         if (sA.length > sB.length) return "〇";
         if (sB.length > sA.length) return "✕";
-        if (idx === 5) return (sA.length > 0 || sB.length > 0) ? "" : "-";
+        if (isDaihyo) return (sA.length > 0 || sB.length > 0) ? "" : "-";
         return (sA.length > 0 || sB.length > 0) ? "引分" : "-";
     }
 
@@ -211,30 +268,35 @@
 
     function saveMatch() {
         const now = new Date();
+        const activePos = getActivePositions(currentMode);
         const currentMatch = {
             id: Date.now(),
+            mode: currentMode,
             comp: document.getElementById('comp').value || "記録",
             label: document.getElementById('match').value || "",
             teamA: document.getElementById('teamA').value || "自チーム",
             teamB: document.getElementById('teamB').value || "相手チーム",
             date: now.getFullYear() + "/" + ("0"+(now.getMonth()+1)).slice(-2) + "/" + ("0"+now.getDate()).slice(-2),
+            positions: activePos,
             results: JSON.parse(JSON.stringify(matchData.map((d, i) => ({...d, nA: playerNames[i].nA, nB: playerNames[i].nB}))))
         };
         matchHistory.unshift(currentMatch);
-        localStorage.setItem('kendo_v7_hist', JSON.stringify(matchHistory));
+        localStorage.setItem('kendo_v8_hist', JSON.stringify(matchHistory));
         updateHistoryDisplay();
         clearMatchInfoOnly(false);
     }
 
     function editMatch(id) {
         const m = matchHistory.find(x => x.id === id);
-        if (m && confirm('この内容を編集エリアに戻しますか？')) {
+        if (m && confirm('この内容を編集エリアに戻しますか？（人数設定も自動で切り替わります）')) {
+            currentMode = m.mode || 5;
             document.getElementById('comp').value = m.comp;
             document.getElementById('match').value = m.label;
             document.getElementById('teamA').value = m.teamA;
             document.getElementById('teamB').value = m.teamB;
             playerNames = m.results.map(r => ({ nA: r.nA, nB: r.nB }));
             matchData = JSON.parse(JSON.stringify(m.results));
+            updateModeButtons();
             renderInput();
             window.scrollTo(0,0);
         }
@@ -243,7 +305,7 @@
     function deleteHistory(id) {
         if(confirm('削除しますか？')) {
             matchHistory = matchHistory.filter(m => m.id !== id);
-            localStorage.setItem('kendo_v7_hist', JSON.stringify(matchHistory));
+            localStorage.setItem('kendo_v8_hist', JSON.stringify(matchHistory));
             updateHistoryDisplay();
         }
     }
@@ -252,18 +314,19 @@
         let html = '';
         matchHistory.forEach((m) => {
             let wA=0, wB=0, pA=0, pB=0;
+            const posList = m.positions || getActivePositions(m.mode || 5);
             const rows = m.results.map((d, idx) => {
                 const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : p).join('');
                 let displayMark = ""; let subText = "";
                 if (d.sA.length > d.sB.length) { displayMark = "〇"; wA++; }
                 else if (d.sB.length > d.sA.length) { displayMark = "✕"; wB++; }
-                else { if (idx !== 5) subText = "引き分け"; }
+                else { if (idx !== posList.length-1) subText = "引き分け"; }
                 pA += d.sA.length; pB += d.sB.length;
                 return { ptsA, ptsB, displayMark, subText, nA: d.nA, nB: d.nB, fA: d.fA, fB: d.fB };
             });
             let resText = (wA > wB) ? "勝ち" : (wB > wA) ? "負け" : (pA > pB) ? "勝ち(本)" : (pB > pA) ? "負け(本)" : "引き分け";
-            html += `<div class="card-container"><div class="card"><div class="card-header"><div class="title-group"><span class="card-comp">${m.comp}</span><span class="card-label">${m.label}</span></div><span class="card-date">${m.date}</span></div><table class="history-table"><tr><th width="18%"></th>${positions.map(p => `<th>${p[0]}</th>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamA}</td>${rows.map(r => `<td><div class="p-name-bold">${r.nA}</div><div class="p-hansoku-box">${"▲".repeat(r.fA)}</div><div class="p-pts-box">${r.ptsA}</div></td>`).join('')}</tr><tr><td style="font-size:11px; background:#f0f0f0;">勝敗</td>${rows.map(r => `<td class="hantei-cell"><div class="hantei-mark">${r.displayMark}</div><div class="hantei-text">${r.subText}</div></td>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamB}</td>${rows.map(r => `<td><div class="p-pts-box">${r.ptsB}</div><div class="p-hansoku-box">${"▲".repeat(r.fB)}</div><div class="p-name-bold">${r.nB}</div></td>`).join('')}</tr></table><div class="print-summary">結果：${wA}(${pA}) ― ${wB}(${pB}) <span class="res-label">${resText}</span></div></div><div class="card-actions-outer no-print"><button class="edit-btn" onclick="editMatch(${m.id})">修正</button><button class="del-btn" onclick="deleteHistory(${m.id})">削除</button></div></div>`;
+            html += `<div class="card-container"><div class="card"><div class="card-header"><div class="title-group"><span class="card-comp">${m.comp}</span><span class="card-label">${m.label} (${m.mode || 5}人制)</span></div><span class="card-date">${m.date}</span></div><table class="history-table"><tr><th width="18%"></th>${posList.map(p => `<th>${p[0]}</th>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamA}</td>${rows.map(r => `<td><div class="p-name-bold">${r.nA}</div><div class="p-hansoku-box">${"▲".repeat(r.fA)}</div><div class="p-pts-box">${r.ptsA}</div></td>`).join('')}</tr><tr><td style="font-size:11px; background:#f0f0f0;">勝敗</td>${rows.map(r => `<td class="hantei-cell"><div class="hantei-mark">${r.displayMark}</div><div class="hantei-text">${r.subText}</div></td>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamB}</td>${rows.map(r => `<td><div class="p-pts-box">${r.ptsB}</div><div class="p-hansoku-box">${"▲".repeat(r.fB)}</div><div class="p-name-bold">${r.nB}</div></td>`).join('')}</tr></table><div class="print-summary">結果：${wA}(${pA}) ― ${wB}(${pB}) <span class="res-label">${resText}</span></div></div><div class="card-actions-outer no-print"><button class="edit-btn" onclick="editMatch(${m.id})">修正</button><button class="del-btn" onclick="deleteHistory(${m.id})">削除</button></div></div>`;
         });
         document.getElementById('history-area').innerHTML = html;
     }
@@ -271,18 +334,18 @@
     function clearMatchInfoOnly(ask=true) {
         if(!ask || confirm('入力をリセットしますか？')) {
             document.getElementById('match').value = ""; document.getElementById('teamB').value = "";
-            playerNames = playerNames.map(p => ({ nA: p.nA, nB: "" }));
-            matchData = positions.map(() => ({ sA: [], sB: [], fA: 0, fB: 0, order: [] }));
+            const activePos = getActivePositions(currentMode);
+            playerNames = activePos.map(p => ({ nA: "", nB: "" }));
+            matchData = activePos.map(() => ({ sA: [], sB: [], fA: 0, fB: 0, order: [] }));
             tempSave(); renderInput();
         }
     }
 
-    // オールリセット機能
     function fullSystemReset() {
         if(confirm('【重要】これまでに保存した全ての試合履歴が消去されます。本当によろしいですか？')) {
             if(confirm('最終確認です。全てのデータが完全に消えます。よろしいですか？')) {
                 localStorage.clear();
-                location.reload(); // ページをリロードして真っさらな状態にする
+                location.reload();
             }
         }
     }
