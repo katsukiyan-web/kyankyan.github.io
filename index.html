@@ -133,9 +133,10 @@
             <tbody id="input-body"></tbody>
         </table>
         
-        <!-- 現在入力中のスコアをリアルタイム表示するエリア -->
+        <!-- 現在入力中のスコアをリアルタイム表示するエリア（改行を追加） -->
         <div id="live-score" class="live-score-banner">
-            現在経過：<span id="live-teamA">自チーム</span> 
+            現在経過：<br>
+            <span id="live-teamA">自チーム</span> 
             <span id="live-valA" class="live-score-val">0(0)</span> ― 
             <span id="live-valB" class="live-score-val">0(0)</span> 
             <span id="live-teamB">相手チーム</span>
@@ -384,7 +385,6 @@
         updatePlayerStats();
     }
 
-    // 個人成績集計処理
     function updatePlayerStats() {
         if (matchHistory.length === 0) {
             document.getElementById('stats-area').innerHTML = '';
