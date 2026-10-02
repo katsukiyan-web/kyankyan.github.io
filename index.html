@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（リアルタイム合計表示付）</title>
+    <title>剣道スコア（完全版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
@@ -92,6 +92,7 @@
         .edit-btn { background: #4caf50; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .del-btn { background: #f44336; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
+        /* 個人成績エリアのスタイル */
         .stats-box { background: white; border: 2.5px solid #000; margin-top: 40px; margin-bottom: 20px; overflow: hidden; }
         .stats-title { background: #333; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; }
         .stats-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
@@ -260,7 +261,6 @@
         updateLiveScore();
     }
 
-    // リアルタイムスコア（現在進行中の勝ち数・取得本数）の動的更新
     function updateLiveScore() {
         let wA = 0, wB = 0, pA = 0, pB = 0;
         matchData.forEach(d => {
@@ -384,6 +384,7 @@
         updatePlayerStats();
     }
 
+    // 個人成績集計処理
     function updatePlayerStats() {
         if (matchHistory.length === 0) {
             document.getElementById('stats-area').innerHTML = '';
@@ -471,8 +472,6 @@
                     <td>${st.draw}</td>
                     <td style="font-weight:bold; color:#d90429;">${winRate}</td>
                     <td>${st.get['メ']}</td><td>${st.get['コ']}</td><td>${st.get['ド']}</td><td>${st.get['反']}</td>
-                    <td style="font-weight:bold;">${st.get.total}</td>
-                    <td>${st.lost['メ']}</td><td>${st.lost['コ']}</td><td>${d.lost ? d.lost['ド'] : st.lost['ド']}</td><td>${st.lost['反']}</td>
                     <td style="font-weight:bold;">${st.get.total}</td>
                     <td>${st.lost['メ']}</td><td>${st.lost['コ']}</td><td>${st.lost['ド']}</td><td>${st.lost['反']}</td>
                     <td style="font-weight:bold; color:#555;">${st.lost.total}</td>
