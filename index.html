@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（試合順表示・引継ぎ版）</title>
+    <title>剣道スコア（個人成績集計付）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
@@ -37,7 +37,7 @@
 
         .undo-btn { width: 80px; height: 35px; font-size: 14px; background: #eee; border: 1px solid #999; border-radius: 6px; }
 
-        #history-area { width: 100%; max-width: 1000px; margin: 0 auto; }
+        #history-area, #stats-area { width: 100%; max-width: 1000px; margin: 0 auto; }
         .card-container { margin-bottom: 35px; position: relative; }
         .card { background: white; border: 2.5px solid #000; width: 100%; box-sizing: border-box; overflow: hidden; }
         
@@ -74,10 +74,18 @@
         .edit-btn { background: #4caf50; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .del-btn { background: #f44336; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
+        /* 個人成績エリアのスタイル */
+        .stats-box { background: white; border: 2.5px solid #000; margin-top: 40px; margin-bottom: 20px; overflow: hidden; }
+        .stats-title { background: #333; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; }
+        .stats-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
+        .stats-table th, .stats-table td { border: 1px solid #000; padding: 6px 4px; }
+        .stats-table th { background: #f0f0f0; }
+        .stats-sub-header { background: #fafafa; font-size: 11px; }
+
         @media print {
             .no-print, .card-actions-outer { display: none !important; }
             body { background: white; padding: 0; }
-            .card-container { page-break-inside: avoid; margin-bottom: 15mm; }
+            .card-container, .stats-box { page-break-inside: avoid; margin-bottom: 15mm; }
         }
     </style>
 </head>
@@ -114,6 +122,7 @@
 </div>
 
 <div id="history-area"></div>
+<div id="stats-area"></div>
 
 <div class="bottom-actions no-print" style="text-align:center; padding: 30px;">
     <button onclick="window.print()" style="padding:15px; background:#333; color:white; border-radius:8px; width:80%; font-weight:bold; cursor:pointer;">印刷・PDF保存</button>
@@ -278,7 +287,6 @@
             positions: activePos,
             results: JSON.parse(JSON.stringify(matchData.map((d, i) => ({...d, nA: playerNames[i].nA, nB: playerNames[i].nB}))))
         };
-        // 配列の最後に追加（これで古い順になる）
         matchHistory.push(currentMatch);
         localStorage.setItem('kendo_v12_hist', JSON.stringify(matchHistory));
         updateHistoryDisplay();
@@ -309,7 +317,6 @@
 
     function updateHistoryDisplay() {
         let html = '';
-        // matchHistoryは既に保存順なので、そのままループする
         matchHistory.forEach((m) => {
             let wA=0, wB=0, pA=0, pB=0;
             const posList = m.positions || getActivePositions(m.mode || 5);
@@ -328,6 +335,113 @@
             html += `<div class="card-container"><div class="card ${isMode7 ? 'mode-7' : ''}"><div class="card-header"><div class="title-group"><span class="card-comp">${m.comp}</span><span class="card-label">${m.label} (${m.mode || 5}人制)</span></div><span class="card-date">${m.date}</span></div><table class="history-table"><tr><th width="18%"></th>${posList.map(p => `<th>${p[0]}</th>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamA}</td>${rows.map(r => `<td><div class="p-name-bold">${r.nA}</div><div class="p-hansoku-box">${"▲".repeat(r.fA)}</div><div class="p-pts-box">${r.ptsA}</div></td>`).join('')}</tr><tr><td style="font-size:11px; background:#f0f0f0;">勝敗</td>${rows.map(r => `<td class="hantei-cell"><div class="hantei-mark">${r.displayMark}</div><div class="hantei-text">${r.subText}</div></td>`).join('')}</tr><tr><td style="font-weight:bold;">${m.teamB}</td>${rows.map(r => `<td><div class="p-pts-box">${r.ptsB}</div><div class="p-hansoku-box">${"▲".repeat(r.fB)}</div><div class="p-name-bold">${r.nB}</div></td>`).join('')}</tr></table><div class="print-summary">結果：${wA}(${pA}) ― ${wB}(${pB}) <span class="res-label">${resText}</span></div></div><div class="card-actions-outer no-print"><button class="edit-btn" onclick="editMatch(${m.id})">修正</button><button class="del-btn" onclick="deleteHistory(${m.id})">削除</button></div></div>`;
         });
         document.getElementById('history-area').innerHTML = html;
+        updatePlayerStats();
+    }
+
+    // 自チーム個人成績の集計処理
+    function updatePlayerStats() {
+        if (matchHistory.length === 0) {
+            document.getElementById('stats-area').innerHTML = '';
+            return;
+        }
+
+        const stats = {};
+
+        matchHistory.forEach(m => {
+            m.results.forEach((r) => {
+                const name = (r.nA || "").trim();
+                if (!name) return; // 名前が未入力の場合は集計から除外
+
+                if (!stats[name]) {
+                    stats[name] = {
+                        matches: 0, win: 0, lose: 0, draw: 0,
+                        get: { 'メ': 0, 'コ': 0, 'ド': 0, '反': 0, total: 0 },
+                        lost: { 'メ': 0, 'コ': 0, 'ド': 0, '反': 0, total: 0 }
+                    };
+                }
+
+                const sA = r.sA || [];
+                const sB = r.sB || [];
+
+                // 不戦勝などの特殊処理（□）を除外して技を集計
+                sA.forEach(p => {
+                    if (['メ', 'コ', 'ド', '反'].includes(p)) {
+                        stats[name].get[p]++;
+                        stats[name].get.total++;
+                    }
+                });
+                sB.forEach(p => {
+                    if (['メ', 'コ', 'ド', '反'].includes(p)) {
+                        stats[name].lost[p]++;
+                        stats[name].lost.total++;
+                    }
+                });
+
+                // 勝敗判定（不戦も含む）
+                if (sA.length > 0 || sB.length > 0 || (r.order && r.order.length > 0)) {
+                    stats[name].matches++;
+                    if (sA.length > sB.length) stats[name].win++;
+                    else if (sB.length > sA.length) stats[name].lose++;
+                    else stats[name].draw++;
+                }
+            });
+        });
+
+        const names = Object.keys(stats);
+        if (names.length === 0) {
+            document.getElementById('stats-area').innerHTML = '';
+            return;
+        }
+
+        let html = `
+            <div class="stats-box">
+                <div class="stats-title">自チーム 個人成績一覧</div>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" width="18%">選手名</th>
+                            <th rowspan="2" width="7%">試合</th>
+                            <th rowspan="2" width="6%">勝</th>
+                            <th rowspan="2" width="6%">負</th>
+                            <th rowspan="2" width="6%">分</th>
+                            <th rowspan="2" width="10%">勝率</th>
+                            <th colspan="5" width="23.5%">取得技（計）</th>
+                            <th colspan="5" width="23.5%">取られた技（計）</th>
+                        </tr>
+                        <tr class="stats-sub-header">
+                            <th>メ</th><th>コ</th><th>ド</th><th>反</th><th>計</th>
+                            <th>メ</th><th>コ</th><th>ド</th><th>反</th><th>計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        names.forEach(name => {
+            const st = stats[name];
+            const winRate = st.matches > 0 ? ((st.win / st.matches) * 100).toFixed(1) + '%' : '0.0%';
+            html += `
+                <tr>
+                    <td style="font-weight:bold;">${name}</td>
+                    <td>${st.matches}</td>
+                    <td>${st.win}</td>
+                    <td>${st.lose}</td>
+                    <td>${st.draw}</td>
+                    <td style="font-weight:bold; color:#d90429;">${winRate}</td>
+                    <td>${st.get['メ']}</td><td>${st.get['コ']}</td><td>${st.get['ド']}</td><td>${st.get['反']}</td>
+                    <td style="font-weight:bold;">${st.get.total}</td>
+                    <td>${st.lost['メ']}</td><td>${st.lost['コ']}</td><td>${st.lost['ド']}</td><td>${st.lost['反']}</td>
+                    <td style="font-weight:bold; color:#555;">${st.lost.total}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        document.getElementById('stats-area').innerHTML = html;
     }
 
     function clearMatchInfoOnly(ask=true, keepNames=false) {
