@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（個人成績集計付）</title>
+    <title>剣道スコア（リアルタイム合計表示付）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
@@ -30,6 +30,24 @@
         .pts-display { font-size: 20px; font-weight: bold; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .hansoku-display { color: #555; font-size: 12px; min-height: 14px; }
         .circle-pt { border: 2px solid currentColor; border-radius: 50%; width: 1.2em; height: 1.2em; display: inline-block; line-height: 1.2em; text-align: center; flex-shrink: 0; }
+
+        /* 入力中リアルタイムスコア表示バナー */
+        .live-score-banner {
+            background: #f8f9fa;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+        }
+        .live-score-val {
+            font-size: 22px;
+            color: #d90429;
+            margin: 0 4px;
+        }
 
         .btn-main { background: #d90429; color: white; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; border: none; border-radius: 8px; margin-top: 10px; }
         .btn-all-clear { background: #6c757d; color: white; padding: 10px; font-size: 12px; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 15px; }
@@ -74,7 +92,6 @@
         .edit-btn { background: #4caf50; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .del-btn { background: #f44336; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
-        /* 個人成績エリアのスタイル */
         .stats-box { background: white; border: 2.5px solid #000; margin-top: 40px; margin-bottom: 20px; overflow: hidden; }
         .stats-title { background: #333; color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; }
         .stats-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
@@ -115,6 +132,14 @@
             <tbody id="input-body"></tbody>
         </table>
         
+        <!-- 現在入力中のスコアをリアルタイム表示するエリア -->
+        <div id="live-score" class="live-score-banner">
+            現在経過：<span id="live-teamA">自チーム</span> 
+            <span id="live-valA" class="live-score-val">0(0)</span> ― 
+            <span id="live-valB" class="live-score-val">0(0)</span> 
+            <span id="live-teamB">相手チーム</span>
+        </div>
+
         <button class="btn-main" onclick="saveMatch()">試合結果を保存</button>
         <button class="btn-all-clear" onclick="clearMatchInfoOnly()">リセット</button>
         <button class="btn-danger-all" onclick="fullSystemReset()">オールリセット（全履歴削除）</button>
@@ -173,6 +198,7 @@
     function tempSave() {
         const data = { currentMode, comp: document.getElementById('comp').value, match: document.getElementById('match').value, teamA: document.getElementById('teamA').value, teamB: document.getElementById('teamB').value, playerNames, matchData };
         localStorage.setItem('kendo_v12_temp', JSON.stringify(data));
+        updateLiveScore();
     }
 
     function loadData() {
@@ -231,6 +257,26 @@
             </tr>
             <tr class="no-print"><td colspan="4" style="text-align:right;"><button class="undo-btn" onclick="undo(${i})">訂正</button></td></tr>
         `).join('');
+        updateLiveScore();
+    }
+
+    // リアルタイムスコア（現在進行中の勝ち数・取得本数）の動的更新
+    function updateLiveScore() {
+        let wA = 0, wB = 0, pA = 0, pB = 0;
+        matchData.forEach(d => {
+            if (d.sA.length > d.sB.length) wA++;
+            else if (d.sB.length > d.sA.length) wB++;
+            pA += d.sA.length;
+            pB += d.sB.length;
+        });
+
+        const teamA = document.getElementById('teamA').value || "自チーム";
+        const teamB = document.getElementById('teamB').value || "相手チーム";
+
+        document.getElementById('live-teamA').textContent = teamA;
+        document.getElementById('live-teamB').textContent = teamB;
+        document.getElementById('live-valA').textContent = `${wA}(${pA})`;
+        document.getElementById('live-valB').textContent = `${wB}(${pB})`;
     }
 
     function getResLabel(sA, sB, isDaihyo) {
@@ -338,7 +384,6 @@
         updatePlayerStats();
     }
 
-    // 自チーム個人成績の集計処理
     function updatePlayerStats() {
         if (matchHistory.length === 0) {
             document.getElementById('stats-area').innerHTML = '';
@@ -350,7 +395,7 @@
         matchHistory.forEach(m => {
             m.results.forEach((r) => {
                 const name = (r.nA || "").trim();
-                if (!name) return; // 名前が未入力の場合は集計から除外
+                if (!name) return;
 
                 if (!stats[name]) {
                     stats[name] = {
@@ -363,7 +408,6 @@
                 const sA = r.sA || [];
                 const sB = r.sB || [];
 
-                // 不戦勝などの特殊処理（□）を除外して技を集計
                 sA.forEach(p => {
                     if (['メ', 'コ', 'ド', '反'].includes(p)) {
                         stats[name].get[p]++;
@@ -377,7 +421,6 @@
                     }
                 });
 
-                // 勝敗判定（不戦も含む）
                 if (sA.length > 0 || sB.length > 0 || (r.order && r.order.length > 0)) {
                     stats[name].matches++;
                     if (sA.length > sB.length) stats[name].win++;
@@ -428,6 +471,8 @@
                     <td>${st.draw}</td>
                     <td style="font-weight:bold; color:#d90429;">${winRate}</td>
                     <td>${st.get['メ']}</td><td>${st.get['コ']}</td><td>${st.get['ド']}</td><td>${st.get['反']}</td>
+                    <td style="font-weight:bold;">${st.get.total}</td>
+                    <td>${st.lost['メ']}</td><td>${st.lost['コ']}</td><td>${d.lost ? d.lost['ド'] : st.lost['ド']}</td><td>${st.lost['反']}</td>
                     <td style="font-weight:bold;">${st.get.total}</td>
                     <td>${st.lost['メ']}</td><td>${st.lost['コ']}</td><td>${st.lost['ド']}</td><td>${st.lost['反']}</td>
                     <td style="font-weight:bold; color:#555;">${st.lost.total}</td>
