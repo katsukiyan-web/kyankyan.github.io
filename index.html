@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（完全版）</title>
+    <title>剣道スコア（機会選択版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
-        .box { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .box { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; position: relative; }
         
         .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .mode-btn { padding: 12px; border: 2px solid #ccc; background: white; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -30,6 +30,15 @@
         .pts-display { font-size: 20px; font-weight: bold; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .hansoku-display { color: #555; font-size: 12px; min-height: 14px; }
         .circle-pt { border: 2px solid currentColor; border-radius: 50%; width: 1.2em; height: 1.2em; display: inline-block; line-height: 1.2em; text-align: center; flex-shrink: 0; }
+
+        /* 技の機会選択モーダルポップアップ */
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+        .modal-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .modal-btn { padding: 12px; font-size: 14px; font-weight: bold; background: #f1f3f5; border: 1px solid #ced4da; border-radius: 6px; cursor: pointer; }
+        .modal-btn:hover { background: #e9ecef; }
+        .modal-cancel { margin-top: 10px; background: #6c757d; color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
         /* 入力中リアルタイムスコア表示バナー */
         .live-score-banner {
@@ -109,6 +118,15 @@
 </head>
 <body>
 
+<!-- 機会選択モーダル -->
+<div id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-content">
+        <div id="modal-title" class="modal-title">技の機会を選択</div>
+        <div id="modal-grid" class="modal-grid"></div>
+        <button class="modal-cancel" onclick="closeModal()">キャンセル</button>
+    </div>
+</div>
+
 <div class="no-print no-print-container">
     <div class="mode-selector">
         <button id="btn-3" class="mode-btn" onclick="changeMode(3)">3人制</button>
@@ -133,7 +151,7 @@
             <tbody id="input-body"></tbody>
         </table>
         
-        <!-- 現在入力中のスコアをリアルタイム表示するエリア（改行を追加） -->
+        <!-- 現在入力中のスコアをリアルタイム表示するエリア -->
         <div id="live-score" class="live-score-banner">
             現在経過：<br>
             <span id="live-teamA">自チーム</span> 
@@ -168,6 +186,9 @@
     let playerNames = [];
     let matchData = [];
     let matchHistory = [];
+
+    // モーダル用の一時変数
+    let activeTarget = null; // {i, side, basePt}
 
     function changeMode(count) {
         if (matchData.some(d => d.sA.length > 0 || d.sB.length > 0 || d.fA > 0 || d.fB > 0)) {
@@ -238,9 +259,9 @@
                     <div class="hansoku-display">${"▲".repeat(d.fA)}</div>
                     <div class="pts-display" style="color:red">${formatPts(i, 'A')}</div>
                     <div class="btn-group">
-                        <button class="btn-red" onclick="addP(${i},'A','メ')">面</button>
-                        <button class="btn-red" onclick="addP(${i},'A','コ')">コ</button>
-                        <button class="btn-red" onclick="addP(${i},'A','ド')">ド</button>
+                        <button class="btn-red" onclick="openModal(${i},'A','メ')">面</button>
+                        <button class="btn-red" onclick="openModal(${i},'A','コ')">コ</button>
+                        <button class="btn-red" onclick="openModal(${i},'A','ド')">ド</button>
                         <button class="btn-fusen" onclick="setF(${i},'A')">不戦</button>
                         <button onclick="addHansoku(${i},'A')">反${d.fA > 0 ? d.fA : ''}</button>
                     </div>
@@ -249,9 +270,9 @@
                     <div class="hansoku-display">${"▲".repeat(d.fB)}</div>
                     <div class="pts-display" style="color:blue">${formatPts(i, 'B')}</div>
                     <div class="btn-group">
-                        <button class="btn-blue" onclick="addP(${i},'B','メ')">面</button>
-                        <button class="btn-blue" onclick="addP(${i},'B','コ')">コ</button>
-                        <button class="btn-blue" onclick="addP(${i},'B','ド')">ド</button>
+                        <button class="btn-blue" onclick="openModal(${i},'B','メ')">面</button>
+                        <button class="btn-blue" onclick="openModal(${i},'B','コ')">コ</button>
+                        <button class="btn-blue" onclick="openModal(${i},'B','ド')">ド</button>
                         <button class="btn-fusen" onclick="setF(${i},'B')">不戦</button>
                         <button onclick="addHansoku(${i},'B')">反${d.fB > 0 ? d.fB : ''}</button>
                     </div>
@@ -260,6 +281,63 @@
             <tr class="no-print"><td colspan="4" style="text-align:right;"><button class="undo-btn" onclick="undo(${i})">訂正</button></td></tr>
         `).join('');
         updateLiveScore();
+    }
+
+    // モーダル制御
+    function openModal(i, side, basePt) {
+        if (matchData[i]['s'+side].length >= 2) return; // 既に2本取っていたら追加不可
+        activeTarget = { i, side, basePt };
+
+        const titleEl = document.getElementById('modal-title');
+        const gridEl = document.getElementById('modal-grid');
+        
+        let options = [];
+        if (basePt === 'メ') {
+            titleEl.textContent = "面（メン）の機会を選択";
+            options = ["居ついたところ", "出鼻", "引きメン", "応じてメン", "スキップ"];
+        } else if (basePt === 'コ') {
+            titleEl.textContent = "コテの機会を選択";
+            options = ["居ついたところ", "出鼻", "引きコテ", "応じてコテ", "スキップ"];
+        } else if (basePt === 'ド') {
+            titleEl.textContent = "ドウの機会を選択";
+            options = ["抜き胴", "返し胴", "逆胴", "引き胴", "スキップ"];
+        }
+
+        gridEl.innerHTML = options.map(opt => `
+            <button class="modal-btn" onclick="selectOpportunity('${opt}')">${opt}</button>
+        `).join('');
+
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function closeModal(e) {
+        if (!e || e.target.id === 'modal-overlay') {
+            document.getElementById('modal-overlay').style.display = 'none';
+            activeTarget = null;
+        }
+    }
+
+    function selectOpportunity(opt) {
+        if (!activeTarget) return;
+        const { i, side, basePt } = activeTarget;
+        
+        let finalPt = basePt;
+        if (opt !== 'スキップ') {
+            finalPt = basePt + '(' + opt + ')';
+        }
+
+        addPDirect(i, side, finalPt);
+        document.getElementById('modal-overlay').style.display = 'none';
+        activeTarget = null;
+    }
+
+    function addPDirect(i, side, pt) {
+        if (matchData[i]['s'+side].length < 2) {
+            matchData[i]['s'+side].push(pt);
+            matchData[i].order.push({side, pt});
+            tempSave();
+            renderInput();
+        }
     }
 
     function updateLiveScore() {
@@ -290,8 +368,8 @@
     function addHansoku(i, side) {
         if (matchData[i]['f' + side] < 4) {
             matchData[i]['f' + side]++;
-            if (matchData[i]['f' + side] % 2 === 0) addP(i, side === 'A' ? 'B' : 'A', '反');
-            tempSave(); renderInput();
+            if (matchData[i]['f' + side] % 2 === 0) addPDirect(i, side === 'A' ? 'B' : 'A', '反');
+            else { tempSave(); renderInput(); }
         }
     }
 
@@ -303,8 +381,6 @@
         }).join('');
     }
 
-    function addP(i, side, pt) { if(matchData[i]['s'+side].length < 2) { matchData[i]['s'+side].push(pt); matchData[i].order.push({side, pt}); tempSave(); renderInput(); } }
-    
     function setF(i, side) {
         matchData[i]['s'+side] = ['□', '□']; matchData[i][side==='A'?'sB':'sA'] = [];
         matchData[i].order = [{side, pt: 'FUSEN'}]; tempSave(); renderInput();
@@ -410,16 +486,16 @@
                 const sB = r.sB || [];
 
                 sA.forEach(p => {
-                    if (['メ', 'コ', 'ド', '反'].includes(p)) {
-                        stats[name].get[p]++;
-                        stats[name].get.total++;
-                    }
+                    if (p.includes('メ')) { stats[name].get['メ']++; stats[name].get.total++; }
+                    else if (p.includes('コ')) { stats[name].get['コ']++; stats[name].get.total++; }
+                    else if (p.includes('ド')) { stats[name].get['ド']++; stats[name].get.total++; }
+                    else if (p.includes('反')) { stats[name].get['反']++; stats[name].get.total++; }
                 });
                 sB.forEach(p => {
-                    if (['メ', 'コ', 'ド', '反'].includes(p)) {
-                        stats[name].lost[p]++;
-                        stats[name].lost.total++;
-                    }
+                    if (p.includes('メ')) { stats[name].lost['メ']++; stats[name].lost.total++; }
+                    else if (p.includes('コ')) { stats[name].lost['コ']++; stats[name].lost.total++; }
+                    else if (p.includes('ド')) { stats[name].lost['ド']++; stats[name].lost.total++; }
+                    else if (p.includes('反')) { stats[name].lost['反']++; stats[name].lost.total++; }
                 });
 
                 if (sA.length > 0 || sB.length > 0 || (r.order && r.order.length > 0)) {
