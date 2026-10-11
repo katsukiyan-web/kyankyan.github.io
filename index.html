@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剣道スコア（機会選択版）</title>
+    <title>剣道スコア（シンプル表示版）</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #eee; margin: 0; padding: 10px; }
         .no-print-container { max-width: 600px; margin: 0 auto; }
@@ -187,8 +187,7 @@
     let matchData = [];
     let matchHistory = [];
 
-    // モーダル用の一時変数
-    let activeTarget = null; // {i, side, basePt}
+    let activeTarget = null;
 
     function changeMode(count) {
         if (matchData.some(d => d.sA.length > 0 || d.sB.length > 0 || d.fA > 0 || d.fB > 0)) {
@@ -283,9 +282,8 @@
         updateLiveScore();
     }
 
-    // モーダル制御
     function openModal(i, side, basePt) {
-        if (matchData[i]['s'+side].length >= 2) return; // 既に2本取っていたら追加不可
+        if (matchData[i]['s'+side].length >= 2) return;
         activeTarget = { i, side, basePt };
 
         const titleEl = document.getElementById('modal-title');
@@ -373,9 +371,14 @@
         }
     }
 
+    // 表示用：取得機会の文字列を除外し、ベースの技（メ・コ・ド・反・□）だけを抽出して表示
     function formatPts(idx, side) {
         const row = matchData[idx];
-        return row['s' + side].map((p, j) => {
+        return row['s' + side].map((fullPt, j) => {
+            let p = fullPt;
+            if (fullPt.startsWith('メ') || fullPt.startsWith('コ') || fullPt.startsWith('ド') || fullPt.startsWith('反')) {
+                p = fullPt[0];
+            }
             const isFirst = row.order[0]?.side === side && j === 0;
             return isFirst ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`;
         }).join('');
@@ -445,8 +448,16 @@
             const posList = m.positions || getActivePositions(m.mode || 5);
             const isMode7 = (m.mode === 7);
             const rows = m.results.map((d, idx) => {
-                const ptsA = d.sA.map((p, j) => (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`).join('');
-                const ptsB = d.sB.map((p, j) => (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`).join('');
+                const ptsA = d.sA.map((fullPt, j) => {
+                    let p = fullPt;
+                    if (fullPt.startsWith('メ') || fullPt.startsWith('コ') || fullPt.startsWith('ド') || fullPt.startsWith('反')) p = fullPt[0];
+                    return (d.order[0]?.side==='A'&&j===0) ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`;
+                }).join('');
+                const ptsB = d.sB.map((fullPt, j) => {
+                    let p = fullPt;
+                    if (fullPt.startsWith('メ') || fullPt.startsWith('コ') || fullPt.startsWith('ド') || fullPt.startsWith('反')) p = fullPt[0];
+                    return (d.order[0]?.side==='B'&&j===0) ? `<span class="circle-pt">${p}</span>` : `<span>${p}</span>`;
+                }).join('');
                 let displayMark = ""; let subText = "";
                 if (d.sA.length > d.sB.length) { displayMark = "〇"; wA++; }
                 else if (d.sB.length > d.sA.length) { displayMark = "✕"; wB++; }
